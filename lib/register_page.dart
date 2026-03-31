@@ -1,195 +1,220 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/configurations.dart';
+import 'package:flutter_application_1/utility.dart';
 
-class RegisterPage extends StatefulWidget {
-  @override
-  State<StatefulWidget> createState() => RegisterPageState();
+class RegisterPage extends StatefulWidget{
+ @override
+ State<StatefulWidget> createState() => RegisterPageState();
 }
+class RegisterPageState extends State<RegisterPage>{
+  final _userID = TextEditingController();
+  final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
+  bool? _isUserValid;
+  bool? _isPasswordValid;
 
-class RegisterPageState extends State<RegisterPage> {
+  void validate() {
+    String userid = _userID.text.trim();
+    String password = _password.text.trim();
+    String confirm = _confirmPassword.text.trim();
 
-  final _formKey = GlobalKey<FormState>();
-
-  // Controllers
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  TextEditingController confirmPasswordController = TextEditingController();
-
-  // UI states
-  bool hidePassword = true;
-  bool hideConfirmPassword = true;
-
-  bool isEmailValid = false;
-  bool hasTypedEmail = false;
-
-  // Email Regex
-  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-
-  void checkEmail(String value){
-    setState(() {
-      hasTypedEmail = value.isNotEmpty;
-      isEmailValid = emailRegex.hasMatch(value);
-    });
-  }
-
-  void validate(){
-
-    if(!_formKey.currentState!.validate()){
-      return;
-    }
-
-    if(passwordController.text != confirmPasswordController.text){
+    // Check user validity
+    if (_isUserValid != true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Passwords do not match"))
+        SnackBar(content: Text('Invalid or existing User ID')),
       );
       return;
     }
 
+    // Check password validity
+    if (_isPasswordValid != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Invalid password')),
+      );
+      return;
+    }
+
+    // Confirm password match
+    if (password != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
+    // Add to credentials list
+    Configurations.credentials.add({
+      'userid': userid,
+      'password': password,
+    });
+    print(Configurations.credentials);
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Registration Successful"))
+      SnackBar(content: Text('Registration successful')),
     );
 
-    Navigator.pop(context);
+    Navigator.pop(context); // go back to login
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: (){
-            Navigator.pop(context);
-          },
-        ),
-        title: Text('Register'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+ void checkUser(String value) {
+    String id = value.trim();
 
-      body: Center(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+    if (id.isEmpty) {
+      setState(() => _isUserValid = null);
+      return;
+    }
 
-              /// EMAIL FIELD
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: TextFormField(
-                  controller: emailController,
-                  onChanged: checkEmail,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20)
-                    ),
+    if (!Configurations.validateEmail(id)) {
+      setState(() => _isUserValid = false);
+      return;
+    }
 
-                    // Tick / Cross icon
-                    suffixIcon: hasTypedEmail
-                        ? Icon(
-                            isEmailValid ? Icons.check_circle : Icons.cancel,
-                            color: isEmailValid ? Colors.green : Colors.red,
-                          )
-                        : null,
-                  ),
+    if (!Configurations.isUserUnique(id)) {
+      setState(() => _isUserValid = false);
+      return;
+    }
 
-                  validator: (value){
-                    if(value == null || value.isEmpty)
-                      return "Email required";
+    setState(() => _isUserValid = true);
+  }
 
-                    if(!emailRegex.hasMatch(value))
-                      return "Enter valid email";
+  void checkPassword(String value) {
+    String pass = value.trim();
 
-                    return null;
-                  },
-                ),
-              ),
+    if (pass.isEmpty) {
+      setState(() => _isPasswordValid = null);
+      return;
+    }
 
-              /// PASSWORD FIELD
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: TextFormField(
-                  controller: passwordController,
-                  obscureText: hidePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20)
-                    ),
+    if (!Utility.validatePassword(pass)) {
+      setState(() => _isPasswordValid = false);
+      return;
+    }
 
-                    // Eye button
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        hidePassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: (){
-                        setState(() {
-                          hidePassword = !hidePassword;
-                        });
-                      },
-                    ),
-                  ),
+    setState(() => _isPasswordValid = true);
+  }
 
-                  validator: (value){
-                    if(value == null || value.isEmpty)
-                      return "Password required";
+ @override
+ Widget build(BuildContext context) {
+   // TODO: implement build
+   return Scaffold(
+     appBar: AppBar(
+       leading: BackButton(
+         onPressed: (){
+           Navigator.pop(context);
+         },
+       ),
+       title: Text('Register'),
+       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+     ),
+     body: Center(
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
 
-                    if(value.length < 6)
-                      return "Min 6 characters";
-
-                    return null;
-                  },
-                ),
-              ),
-
-              /// CONFIRM PASSWORD FIELD
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: TextFormField(
-                  controller: confirmPasswordController,
-                  obscureText: hideConfirmPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20)
-                    ),
-
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        hideConfirmPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: (){
-                        setState(() {
-                          hideConfirmPassword = !hideConfirmPassword;
-                        });
-                      },
-                    ),
-                  ),
-
-                  validator: (value){
-                    if(value == null || value.isEmpty)
-                      return "Confirm your password";
-
-                    if(value != passwordController.text)
-                      return "Passwords do not match";
-
-                    return null;
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              /// REGISTER BUTTON
-              ElevatedButton(
-                onPressed: validate,
-                child: Text('Register'),
-              ),
-            ],
+      Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: TextField(
+          controller: _userID,
+          onChanged: checkUser,
+          decoration: InputDecoration(
+            suffixIcon: _isUserValid == null
+                ? null
+                : (_isUserValid!
+                    ? Container(
+                        margin: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      )
+                    : Container(
+                        margin: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      )),
+            labelText: 'User ID',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
           ),
         ),
       ),
-    );
-  }
+
+      Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: TextField(
+          controller: _password,
+          obscureText: true,
+          onChanged: checkPassword,
+          decoration: InputDecoration(
+            suffixIcon: _isPasswordValid == null
+                ? null
+                : (_isPasswordValid!
+                    ? Container(
+                        margin: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      )
+                    : Container(
+                        margin: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      )),
+            labelText: 'Password',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+      ),
+
+      Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: TextField(
+          controller: _confirmPassword,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'Confirm Password',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+      ),
+
+      ElevatedButton(
+        onPressed: validate,
+        child: Text('Register'),
+      ),
+    ],
+  ),
+),
+);
+}
 }
