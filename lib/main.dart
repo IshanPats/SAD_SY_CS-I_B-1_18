@@ -3,14 +3,23 @@ import 'package:flutter_application_1/register_page.dart';
 import 'package:flutter_application_1/utility.dart';
 import 'package:flutter_application_1/configurations.dart';
 import 'content_page.dart';
-import 'product_view.dart'; // ✅ NEW
+import 'product_view.dart';
+import 'todo_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final prefs = await SharedPreferences.getInstance();
+  bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +28,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Login'),
+      home: isLoggedIn
+          ? const ToDoPage()
+          : const MyHomePage(title: 'Login'),
     );
   }
 }
@@ -37,9 +48,13 @@ class _MyHomePageState extends State<MyHomePage> {
   final _password = TextEditingController();
 
   String? _userIDErrorText, _passwordErrorText;
+  bool isLoading = false;
 
-  void validate() {
+  Future<void> validate() async {
+    if (isLoading) return;
+
     setState(() {
+      isLoading = true;
       _userIDErrorText = _setUserIDErrorText(_userID.text);
       _passwordErrorText = _setPasswordErrorText(_password.text);
     });
@@ -50,12 +65,28 @@ class _MyHomePageState extends State<MyHomePage> {
         _password.text.trim(),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isValid ? 'Login Successful' : 'Invalid credentials'),
-        ),
-      );
+      if (isValid) {
+        await saveLoginState();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ToDoPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid credentials')),
+        );
+      }
     }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> saveLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
   }
 
   String? _setUserIDErrorText(String value) {
@@ -67,6 +98,13 @@ class _MyHomePageState extends State<MyHomePage> {
   String? _setPasswordErrorText(String value) {
     if (value.isEmpty) return 'Please enter Password';
     return null;
+  }
+
+  @override
+  void dispose() {
+    _userID.dispose();
+    _password.dispose();
+    super.dispose();
   }
 
   @override
@@ -110,7 +148,10 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
 
-            ElevatedButton(onPressed: validate, child: Text('Login')),
+            ElevatedButton(
+              onPressed: isLoading ? null : validate,
+              child: const Text('Login'),
+            ),
 
             ElevatedButton(
               onPressed: () {
@@ -119,7 +160,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   MaterialPageRoute(builder: (context) => RegisterPage()),
                 );
               },
-              child: Text('Sign Up'),
+              child: const Text('Sign Up'),
             ),
 
             ElevatedButton(
@@ -129,10 +170,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   MaterialPageRoute(builder: (context) => ContentPage()),
                 );
               },
-              child: Text("content"),
+              child: const Text("content"),
             ),
 
-            // ✅ NEW PRODUCTS BUTTON
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -142,7 +182,19 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 );
               },
-              child: Text("products"),
+              child: const Text("products"),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ToDoPage(),
+                  ),
+                );
+              },
+              child: const Text("ToDo"),
             ),
           ],
         ),
